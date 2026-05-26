@@ -82,52 +82,36 @@ jobs:
       - name: Calcular nota
         if: env.salida == '0'
         run: |
-          NOMBRE="${{ steps.estudiante.outputs.nombre }}"
-          CORREO="${{ steps.estudiante.outputs.correo }}"
-          FILA="${{ steps.estudiante.outputs.fila }}"
+          PASADAS=$(grep "tests successful" resultados/salida.txt | grep -oP '\[\s*\K\d+' || true)
+          FALLADAS=$(grep "tests failed" resultados/salida.txt | grep -oP '\[\s*\K\d+' || true)
 
-          XML_FILE=$(find resultados -name "TEST-*.xml" 2>/dev/null | head -1)
+          if [ -z "$PASADAS" ]; then PASADAS=0; fi
+          if [ -z "$FALLADAS" ]; then FALLADAS=0; fi
 
-          TEST1_PASS=false
-          TEST2_PASS=false
-          TEST3_PASS=false
+          TOTAL=$((PASADAS + FALLADAS))
 
-          if [ -n "$XML_FILE" ]; then
-            grep -q 'name="testGetTotalActiveGoals()"'    "$XML_FILE" && \
-              ! grep -A5 'name="testGetTotalActiveGoals()"'    "$XML_FILE" | grep -q '<failure' && TEST1_PASS=true
-            grep -q 'name="testMetodoOrdenamiento()"'     "$XML_FILE" && \
-              ! grep -A5 'name="testMetodoOrdenamiento()"'     "$XML_FILE" | grep -q '<failure' && TEST2_PASS=true
-            grep -q 'name="testBusquedaBinariaPorFila()"' "$XML_FILE" && \
-              ! grep -A5 'name="testBusquedaBinariaPorFila()"' "$XML_FILE" | grep -q '<failure' && TEST3_PASS=true
+          PUNTOS_BASE=$((PASADAS * 2))
+
+          if [ "$TOTAL" -eq 0 ]; then
+            NOTA=0
+          else
+            NOTA=$(echo "scale=2; $PUNTOS_BASE * 8 / 6" | bc)
           fi
 
-          NOTA=0
-          [ "$TEST1_PASS" = "true" ] && NOTA=$((NOTA + 2))
-          [ "$TEST2_PASS" = "true" ] && NOTA=$((NOTA + 3))
-          [ "$TEST3_PASS" = "true" ] && NOTA=$((NOTA + 3))
-
-          [ "$TEST1_PASS" = "true" ] && T1="[OK] Test 1 - getTotalActiveGoals:    2/2 pts" || T1="[--] Test 1 - getTotalActiveGoals:    0/2 pts"
-          [ "$TEST2_PASS" = "true" ] && T2="[OK] Test 2 - Ordenamiento:           3/3 pts" || T2="[--] Test 2 - Ordenamiento:           0/3 pts"
-          [ "$TEST3_PASS" = "true" ] && T3="[OK] Test 3 - Busqueda binaria:       3/3 pts" || T3="[--] Test 3 - Busqueda binaria:       0/3 pts"
-
-          USUARIO=$(echo "$CORREO" | cut -d '@' -f1)
+          USUARIO=$(echo "${{ steps.estudiante.outputs.correo }}" | cut -d '@' -f1)
           REPO=$(basename "$GITHUB_REPOSITORY")
           ARCHIVO="$USUARIO-$REPO.txt"
 
-          {
-            echo "Estudiante: $NOMBRE"
-            echo "Correo: $CORREO"
-            echo "Fila: $FILA"
-            echo "---"
-            echo "$T1"
-            echo "$T2"
-            echo "$T3"
-            echo "---"
-            echo "Nota final: $NOTA / 8"
-          } > "$ARCHIVO"
+          echo "Estudiante: ${{ steps.estudiante.outputs.nombre }}" > "$ARCHIVO"
+          echo "Correo: ${{ steps.estudiante.outputs.correo }}" >> "$ARCHIVO"
+          echo "Fila: ${{ steps.estudiante.outputs.fila }}" >> "$ARCHIVO"
+          echo "---" >> "$ARCHIVO"
+          echo "Pruebas pasadas: $PASADAS de $TOTAL" >> "$ARCHIVO"
+          echo "Puntaje base: $PUNTOS_BASE / 6" >> "$ARCHIVO"
+          echo "Nota final: $NOTA / 8" >> "$ARCHIVO"
 
           echo "ARCHIVO=$ARCHIVO" >> $GITHUB_ENV
-          echo "::notice title=Nota Final::$NOMBRE obtuvo $NOTA / 8 (Fila $FILA)"
+          echo "::notice title=Nota Final::${{ steps.estudiante.outputs.nombre }} obtuvo $NOTA / 8 (${PASADAS} de ${TOTAL} pruebas, Fila ${{ steps.estudiante.outputs.fila }}
 
       - name: Subir resultado
         uses: actions/upload-artifact@v4
