@@ -14,8 +14,22 @@ public class LeagueController {
      * @return Arreglo ordenado
      */
     public League[] sortSelectionAsc(League[] leagues) {
-        // TODO: Implementar (solo si su fila es A)
-        throw new UnsupportedOperationException("Metodo sortSelectionAsc no implementado");
+        int tam = leagues.length;
+        for(int i = 0; i < tam - 1; i++) {
+            int indiceMenor = i;
+            for(int j= i + 1; j<tam; j++) {
+                if(leagues[j].getTotalActiveGoals() < leagues[indiceMenor].getTotalActiveGoals()) {
+                    indiceMenor = j;
+                }
+            }
+
+            if(indiceMenor != i) {
+                League temp = leagues[i];
+                leagues[i] = leagues[indiceMenor];
+                leagues[indiceMenor] = temp;
+            }
+        }
+        return leagues;
     }
 
     /**
@@ -47,8 +61,20 @@ public class LeagueController {
      * @return La liga encontrada, o null si no existe
      */
     public League binarySearchByTotalActiveGoals(League[] leagues, int totalActiveGoals) {
-        // TODO: Implementar
-        throw new UnsupportedOperationException("Metodo binarySearchByTotalActiveGoals no implementado");
+        int inicio = 0;
+        int fin = leagues.length - 1;
+        while(inicio <= fin) {
+            int medio = inicio + (fin - inicio) / 2;
+            int golesMedio = leagues[medio].getTotalActiveGoals();
+            if(golesMedio == totalActiveGoals) {
+                return leagues[medio];
+            } else if(golesMedio < totalActiveGoals) {
+                inicio = medio + 1;
+            } else {
+                fin = medio - 1;
+            }
+        }
+        return null;
     }
 
     /**
@@ -57,6 +83,9 @@ public class LeagueController {
      * @param leagues Arreglo de ligas a imprimir
      */
     public void printLeagues(League[] leagues) {
+        for(int i=0; i<leagues.length; i++) {
+            System.out.println(i+1 + ". " + leagues[i].getName() + " - " + "Goles Activos" + leagues[i].getTotalActiveGoals());
+        }
 
     }
 }
